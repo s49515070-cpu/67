@@ -6,7 +6,7 @@
 import { gameLoop, claimAvailableMilestones } from "./engine.js";
 import { renderUI, renderBuildings, renderPrestigeUpgrades, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled } from "./config.js";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor } from "./config.js";
 import { t } from "./i18n.js";
 
 // ===============================
@@ -47,14 +47,20 @@ function initSettingsControls() {
     const settingsCloseButton = document.getElementById("settingsCloseButton");
     const soundInput = document.getElementById("soundEnabledInput");
     const languageInput = document.getElementById("languageInput");
+    const backgroundColorInput = document.getElementById("backgroundColorInput");
     const resetSettingsButton = document.getElementById("resetSettingsButton");
 
     const setPanelVisibility = (visible) => {
         if (!settingsPanel) return;
         settingsPanel.hidden = !visible;
+        if (settingsToggleButton) {
+            settingsToggleButton.setAttribute("aria-expanded", visible ? "true" : "false");
+        }
     };
 
     if (settingsToggleButton) {
+        settingsToggleButton.setAttribute("aria-controls", "settingsPanel");
+        settingsToggleButton.setAttribute("aria-expanded", "false");
         settingsToggleButton.addEventListener("click", () => {
             setPanelVisibility(settingsPanel?.hidden);
         });
@@ -81,12 +87,23 @@ function initSettingsControls() {
         });
     }
 
+    if (backgroundColorInput) {
+        backgroundColorInput.value = getBackgroundColor() || "#dff6ff";
+        backgroundColorInput.addEventListener("change", () => {
+            const selectedColor = backgroundColorInput.value;
+            updateBackgroundColor(selectedColor);
+            applyWorldTheme();
+            showToast(t("backgroundUpdated"), 1400, "info");
+        });
+    }
+
     if (resetSettingsButton) {
         resetSettingsButton.addEventListener("click", () => {
             const defaults = resetRuntimeConfig();
 
             if (soundInput) soundInput.value = defaults.soundEnabled ? "on" : "off";
             if (languageInput) languageInput.value = defaults.language;
+            if (backgroundColorInput) backgroundColorInput.value = defaults.backgroundColor || "#dff6ff";
 
             restartAutosaveTimer();
             applyStaticTranslations();
