@@ -1,20 +1,12 @@
-// =====================================
-// MAIN ENTRY – SNUS CLICKER
-// =====================================
-
 import { gameLoop } from "./engine.js";
-import { renderUI, renderBuildings, applyWorldTheme } from "./ui.js";
+import { renderUI, renderBuildings, renderPrestigeUpgrades, applyWorldTheme } from "./ui.js";
 import { loadGame, saveGame } from "./save.js";
 
-// ===============================
-// INITIALISIERUNG
-// ===============================
-
 function init() {
-
     loadGame();
     applyWorldTheme();
     renderBuildings();
+    renderPrestigeUpgrades();
 
     gameLoop();
     uiLoop();
@@ -22,18 +14,10 @@ function init() {
     setInterval(saveGame, 5000);
 }
 
-// ===============================
-// UI LOOP
-// ===============================
-
 function uiLoop() {
     renderUI();
     renderBuildings();
     requestAnimationFrame(uiLoop);
 }
-
-// ===============================
-// START
-// ===============================
 
 init();
