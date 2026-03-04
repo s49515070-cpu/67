@@ -3,6 +3,7 @@
 // Rendering & Interaktion
 // =====================================
 
+import { prestigeUpgrades, buyPrestigeUpgrade } from "./prestige.js";
 import { gameState, clickCookie, buyBuilding, setBuyMode, calculateCps, changeWorld, prestigeReset } from "./engine.js";
 import { buildings } from "./buildings.js";
 import { worlds, getWorldById, isWorldUnlocked } from "./worlds.js";
