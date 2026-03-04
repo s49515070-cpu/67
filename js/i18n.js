@@ -7,7 +7,7 @@ const translations = {
         statsPrestigeSnus: "Prestige-Snus",
         worldSwitch: "🌍 Welt wechseln",
         worldLocked: "🔒 Diese Welt ist noch gesperrt!",
-       worldUnlockProgress: "Nächste Welt: {current}/{target} Prestige-Snus (noch {remaining})",
+        worldUnlockProgress: "Nächste Welt: {current}/{target} Prestige-Snus (noch {remaining})",
         worldAllUnlocked: "Alle Welten freigeschaltet",
         prestigeTitle: "💎 Prestige Upgrades",
         prestigeReset: "Prestige-Reset",
@@ -43,6 +43,7 @@ const translations = {
         prestigeReady: "✅ Prestige-Reset ist bereit!",
         settingBackground: "Hintergrundfarbe",
         backgroundUpdated: "🎨 Hintergrund aktualisiert."
+    },
     en: {
         statsSnus: "Snus",
         statsPerSecond: "Per second",
