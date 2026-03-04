@@ -1,5 +1,5 @@
 // =====================================
-// PRESTIGE SYSTEM 2.0 – SNUS CLICKER
+// PRESTIGE SYSTEM 2.0 – MODULE VERSION
 // =====================================
 
 import { gameState } from "./engine.js";
