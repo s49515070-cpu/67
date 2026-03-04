@@ -19,9 +19,9 @@
         </div>
 
         <div class="stats">
-            <div>Cookies: <span id="cookieCount">0</span></div>
-            <div>Pro Sekunde: <span id="cps">0</span></div>
-            <div>Prestige Cookies: <span id="prestigeCount">0</span></div>
+            <div>Cookies: <span id="cookieCount" aria-live="polite">0</span></div>
+            <div>Pro Sekunde: <span id="cps" aria-live="polite">0</span></div>
+            <div>Prestige Cookies: <span id="prestigeCount" aria-live="polite">0</span></div>  
         </div>
     </div>
 
@@ -33,7 +33,7 @@
 
         <!-- Cookie Mitte -->
         <div class="cookie-container">
-            <div id="cookieClickArea">
+            <div id="cookieClickArea" role="button" tabindex="0" aria-label="Cookie klicken">
                 <img id="mainCookie" src="assets/cookies/world1.png" alt="Cookie">
                 <div id="clickEffectContainer"></div>
             </div>
@@ -47,6 +47,7 @@
     <!-- Prestige Panel -->
     <div class="prestige-panel glass">
         <h3>💎 Prestige Upgrades</h3>
+         <div id="prestigeSummary" class="prestige-summary"></div>
         <div id="prestigeUpgrades"></div>
         <button id="prestigeButton">Prestige Reset</button>
     </div>
@@ -58,6 +59,29 @@
         <button data-buy="100">x100</button>
         <button data-buy="max">MAX</button>
     </div>
+
+     <!-- Save Controls -->
+    <div class="save-controls glass">
+        <button id="exportSaveButton">📤 Save exportieren</button>
+        <button id="importSaveButton">📥 Save importieren</button>
+        <button id="resetSaveButton">🗑️ Save zurücksetzen</button>
+    </div>
+
+    <!-- Settings Controls -->
+    <div class="settings-controls glass">
+        <label>
+            Autosave (ms)
+            <input id="autosaveIntervalInput" type="number" min="1000" max="60000" step="500">
+            <small>1000–60000 ms</small>
+        </label>
+        <label>
+            UI Refresh (ms)
+            <input id="uiRefreshIntervalInput" type="number" min="16" max="1000" step="10">
+            <small>16–1000 ms</small>
+        </label>
+        <button id="resetSettingsButton" type="button">↺ Settings zurücksetzen</button>
+    </div>
+
 
     <!-- Autosave Anzeige -->
     <div id="autosaveIndicator">💾 Gespeichert</div>
