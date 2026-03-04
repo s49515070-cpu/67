@@ -91,12 +91,13 @@ export function getMaxAffordableSummary(building, owned, cookies) {
     let totalCost = 0;
 
     while (true) {
-          const cost = Math.floor(nextCostSeed);
+        const cost = Math.floor(nextCostSeed);
         if (totalCost + cost > cookies) break;
         totalCost += cost;
         count++;
         nextCostSeed *= building.growth;
     }
 
- return { count, totalCost };
+
+       return { count, totalCost };
 }
