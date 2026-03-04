@@ -89,6 +89,7 @@ export function getMaxAffordableSummary(building, owned, cookies) {
 
     let count = 0;
     let totalCost = 0;
+    let nextCostSeed = getCostSeed(building, owned);
 
     while (true) {
         const cost = Math.floor(nextCostSeed);
