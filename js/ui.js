@@ -59,8 +59,9 @@ export function renderBuildings() {
     buildings.forEach(building => {
 
         const owned = gameState.buildingData[building.id].owned;
-        const cost = Math.floor(building.baseCost * Math.pow(building.growth, owned));
-
+       if (gameState.cookies < cost) {
+    card.style.opacity = "0.5";
+}
         const card = document.createElement("div");
         card.className = "building-card";
         card.innerHTML = `
