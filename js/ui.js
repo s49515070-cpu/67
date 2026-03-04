@@ -1,14 +1,8 @@
-// =====================================
-// UI SYSTEM – SNUS CLICKER
-// Rendering & Interaktion
-// =====================================
-
-import { prestigeUpgrades, buyPrestigeUpgrade } from "./prestige.js";
 import { gameState, clickCookie, buyBuilding, setBuyMode, calculateCps, changeWorld, prestigeReset } from "./engine.js";
 import { buildings } from "./buildings.js";
 import { worlds, getWorldById, isWorldUnlocked } from "./worlds.js";
+import { prestigeUpgrades, buyPrestigeUpgrade } from "./prestige.js";
 
-// DOM Elemente
 const cookieCountEl = document.getElementById("cookieCount");
 const cpsEl = document.getElementById("cps");
 const prestigeCountEl = document.getElementById("prestigeCount");
@@ -21,11 +15,6 @@ const cookieClickArea = document.getElementById("cookieClickArea");
 const clickEffectContainer = document.getElementById("clickEffectContainer");
 const mainCookie = document.getElementById("mainCookie");
 const worldTransition = document.getElementById("worldTransition");
-const autosaveIndicator = document.getElementById("autosaveIndicator");
-
-// ===============================
-// FORMATTER
-// ===============================
 
 function formatNumber(num) {
     if (num < 1000) return num.toFixed(0);
@@ -34,39 +23,28 @@ function formatNumber(num) {
     return (num / 1000000000).toFixed(1) + "B";
 }
 
-// ===============================
-// RENDER LOOP
-// ===============================
-
 export function renderUI() {
-
     cookieCountEl.textContent = formatNumber(gameState.cookies);
     cpsEl.textContent = formatNumber(calculateCps());
     prestigeCountEl.textContent = gameState.prestigeCookies;
-
-    const world = getWorldById(gameState.currentWorld);
-    worldNameEl.textContent = world.name;
+    worldNameEl.textContent = getWorldById(gameState.currentWorld).name;
 }
 
-// ===============================
-// BUILDINGS RENDER
-// ===============================
-
 export function renderBuildings() {
-
     leftColumn.innerHTML = "";
     rightColumn.innerHTML = "";
 
     buildings.forEach(building => {
-
         const owned = gameState.buildingData[building.id].owned;
-        if (gameState.cookies < cost) {
-    card.style.opacity = "0.5";
-}
+        const cost = Math.floor(building.baseCost * Math.pow(building.growth, owned));
+
         const card = document.createElement("div");
         card.className = "building-card";
+
+        if (gameState.cookies < cost) card.style.opacity = "0.5";
+
         card.innerHTML = `
-            <img src="${building.icon}" alt="">
+            <img src="${building.icon}">
             <div>
                 <div><strong>${building.name}</strong> (${owned})</div>
                 <div>Kosten: ${formatNumber(cost)}</div>
@@ -74,26 +52,41 @@ export function renderBuildings() {
         `;
 
         card.addEventListener("click", () => {
-    const success = buyBuilding(building.id);
-    if (success) {
-        renderBuildings();
-    }
-});
+            const success = buyBuilding(building.id);
+            if (success) renderBuildings();
+        });
 
-        if (building.side === "left") {
-            leftColumn.appendChild(card);
-        } else {
-            rightColumn.appendChild(card);
-        }
+        building.side === "left"
+            ? leftColumn.appendChild(card)
+            : rightColumn.appendChild(card);
     });
 }
 
-// ===============================
-// CLICK EFFECT
-// ===============================
+export function renderPrestigeUpgrades() {
+    const container = document.getElementById("prestigeUpgrades");
+    container.innerHTML = "";
+
+    prestigeUpgrades.forEach(upgrade => {
+        const div = document.createElement("div");
+        div.style.marginBottom = "8px";
+        div.style.cursor = "pointer";
+
+        div.innerHTML = `
+            <strong>${upgrade.name}</strong><br>
+            ${upgrade.description}<br>
+            Kosten: ${upgrade.cost} 🍪
+        `;
+
+        div.addEventListener("click", () => {
+            const success = buyPrestigeUpgrade(upgrade.id);
+            if (success) renderPrestigeUpgrades();
+        });
+
+        container.appendChild(div);
+    });
+}
 
 cookieClickArea.addEventListener("click", (e) => {
-
     const amount = clickCookie();
 
     const effect = document.createElement("div");
@@ -104,80 +97,14 @@ cookieClickArea.addEventListener("click", (e) => {
     effect.style.top = e.offsetY + "px";
 
     clickEffectContainer.appendChild(effect);
-
-    setTimeout(() => {
-        effect.remove();
-    }, 1000);
+    setTimeout(() => effect.remove(), 1000);
 });
-
-// ===============================
-// BUY MODE BUTTONS
-// ===============================
-
-document.querySelectorAll(".buy-options button").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const mode = btn.dataset.buy;
-        setBuyMode(mode === "max" ? "max" : parseInt(mode));
-    });
-});
-
-// ===============================
-// PRESTIGE
-// ===============================
 
 prestigeButton.addEventListener("click", () => {
     const earned = prestigeReset();
     if (earned > 0) {
         alert("Du hast " + earned + " Prestige Cookies erhalten!");
         renderBuildings();
+        renderPrestigeUpgrades();
     }
 });
-
-// ===============================
-// WORLD SWITCH
-// ===============================
-
-worldButton.addEventListener("click", () => {
-
-    let nextWorld = gameState.currentWorld + 1;
-    if (nextWorld > worlds.length) nextWorld = 1;
-
-    const world = getWorldById(nextWorld);
-
-    if (!isWorldUnlocked(world, gameState.prestigeCookies)) {
-        alert("Diese Welt ist noch gesperrt!");
-        return;
-    }
-
-    worldTransition.classList.add("active");
-
-    setTimeout(() => {
-        changeWorld(nextWorld);
-        applyWorldTheme();
-        worldTransition.classList.remove("active");
-    }, 600);
-});
-
-// ===============================
-// WORLD THEME
-// ===============================
-
-export function applyWorldTheme() {
-
-    const world = getWorldById(gameState.currentWorld);
-
-    document.body.style.background = world.theme.background;
-    mainCookie.src = world.cookieImage;
-    mainCookie.style.filter = `drop-shadow(0 0 20px ${world.theme.glow})`;
-}
-
-// ===============================
-// AUTOSAVE ANZEIGE
-// ===============================
-
-export function showAutosave() {
-    autosaveIndicator.classList.add("show");
-    setTimeout(() => {
-        autosaveIndicator.classList.remove("show");
-    }, 1000);
-}
