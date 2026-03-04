@@ -141,6 +141,10 @@ export function renderUI() {
     cpsEl.textContent = formatNumber(calculateCps());
     prestigeCountEl.textContent = gameState.prestigeCookies;
 
+
+const world = getWorldById(gameState.currentWorld);
+
+
     if (world) {
         worldNameEl.textContent = world.name;
     }
