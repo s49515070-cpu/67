@@ -39,6 +39,12 @@ body {
     font-weight: bold;
 }
 
+.next-world-progress {
+    font-size: 0.78rem;
+    color: #334155;
+    margin-top: 4px;
+}
+
 .world-section button {
     margin-left: 10px;
     padding: 6px 12px;
@@ -287,11 +293,9 @@ body {
         flex: 1 1 48%;
     }
 
-    .settings-controls {
+    .settings-panel {
         left: 10px;
         right: 10px;
-        top: auto;
-        bottom: 170px;
         width: auto;
     }
 }
@@ -383,22 +387,47 @@ body {
 }
 
 
-.settings-controls {
+.settings-toggle-button {
     position: fixed;
     left: 20px;
     top: 100px;
-    display: grid;
-    gap: 8px;
-    width: 180px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
 }
 
-.settings-controls label {
+.settings-panel {
+    position: fixed;
+    left: 20px;
+    top: 150px;
+    display: grid;
+    gap: 8px;
+    width: 240px;
+    z-index: 25;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.settings-header button {
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.settings-panel label {
     display: grid;
     gap: 4px;
     font-size: 0.8rem;
 }
 
-.settings-controls input {
+.settings-panel input,
+.settings-panel select {
     border: none;
     border-radius: 8px;
     padding: 6px 8px;
@@ -411,7 +440,7 @@ body {
 }
 
 
-.settings-controls small {
+.settings-panel small {
     color: #4b5563;
     font-size: 0.72rem;
 }
