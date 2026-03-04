@@ -339,6 +339,8 @@ export function getPotentialPrestigeGain() {
 
 export function prestigeReset() {
 
+    const earned = getPotentialPrestigeGain();
+
 
     if (earned <= 0) return 0;
 
