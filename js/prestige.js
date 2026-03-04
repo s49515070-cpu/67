@@ -44,6 +44,7 @@ export const prestigeUpgrades = [
 ];
 
 export function buyPrestigeUpgrade(id) {
+
     const upgrade = prestigeUpgrades.find(u => u.id === id);
     if (!upgrade) return false;
 
