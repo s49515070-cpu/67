@@ -100,7 +100,7 @@ function normalizeSavePayload(parsed) {
 // SPEICHERN
 // ===============================
 
-export function saveGame() 
+export function saveGame() {
     try {
         localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
         showAutosave();
@@ -119,9 +119,9 @@ export function loadGame() {
     if (!data) return false;
 
     try {
+        const parsed = JSON.parse(data);
         const normalized = normalizeSavePayload(parsed);
 
-    const parsed = JSON.parse(data);
         if (!normalized) {
             return false;
         }
