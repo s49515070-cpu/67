@@ -232,8 +232,14 @@ body {
     bottom: 10px;
     right: 20px;
     opacity: 0;
-    transition: opacity 0.5s;
+    transition: opacity 0.3s;
     font-size: 14px;
+    background: rgba(34, 34, 34, 0.82);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    pointer-events: none;
+    max-width: 280px;
 }
 
 #autosaveIndicator.show {
@@ -269,4 +275,174 @@ body {
     #mainCookie {
         width: 180px;
     }
+
+    .save-controls {
+        left: 10px;
+        right: 10px;
+        bottom: 70px;
+        flex-wrap: wrap;
+    }
+
+    .save-controls button {
+        flex: 1 1 48%;
+    }
+
+    .settings-controls {
+        left: 10px;
+        right: 10px;
+        top: auto;
+        bottom: 170px;
+        width: auto;
+    }
+}
+
+
+.save-controls {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    display: flex;
+    gap: 8px;
+}
+
+.save-controls button {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#prestigeUpgrades:empty {
+    display: none;
+}
+
+
+.building-card:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+#cookieClickArea:focus-visible {
+    outline: 3px solid rgba(255, 215, 0, 0.9);
+    outline-offset: 4px;
+    border-radius: 20px;
+}
+
+
+.prestige-upgrade {
+    width: 100%;
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 8px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.prestige-upgrade-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.prestige-upgrade-description,
+.prestige-upgrade-meta {
+    font-size: 0.85rem;
+}
+
+.prestige-upgrade.is-affordable {
+    border-color: rgba(46, 204, 113, 0.6);
+}
+
+.prestige-upgrade.is-unaffordable {
+    opacity: 0.7;
+}
+
+.prestige-upgrade:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+
+#resetSaveButton {
+    background: #f56565;
+    color: white;
+}
+
+#resetSaveButton:hover {
+    filter: brightness(1.05);
+}
+
+
+.prestige-summary {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    color: #374151;
+    font-weight: 600;
+}
+
+
+.settings-controls {
+    position: fixed;
+    left: 20px;
+    top: 100px;
+    display: grid;
+    gap: 8px;
+    width: 180px;
+}
+
+.settings-controls label {
+    display: grid;
+    gap: 4px;
+    font-size: 0.8rem;
+}
+
+.settings-controls input {
+    border: none;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+
+#prestigeButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+
+.settings-controls small {
+    color: #4b5563;
+    font-size: 0.72rem;
+}
+
+#resetSettingsButton {
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    background: #334155;
+    color: #fff;
+    font-weight: 600;
+}
+
+#resetSettingsButton:hover {
+    filter: brightness(1.08);
+}
+
+
+#autosaveIndicator.toast-success {
+    background: rgba(22, 163, 74, 0.9);
+}
+
+#autosaveIndicator.toast-warning {
+    background: rgba(180, 83, 9, 0.9);
+}
+
+#autosaveIndicator.toast-error {
+    background: rgba(185, 28, 28, 0.92);
+}
+
+#autosaveIndicator.toast-info {
+    background: rgba(30, 64, 175, 0.88);
 }
