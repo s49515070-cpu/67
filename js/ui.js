@@ -11,6 +11,7 @@ import { createBuildingsUIController } from "./ui-buildings.js";
 import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createPrestigeUIController } from "./ui-prestige.js";
 import { t } from "./i18n.js";
+import { getBackgroundColor } from "./config.js";
 import { playClickSound } from "./audio.js";
 
 // DOM Elemente
@@ -23,6 +24,7 @@ const nextWorldProgressEl = document.getElementById("nextWorldProgress");
 const prestigeButton = document.getElementById("prestigeButton");
 const prestigeUpgradesEl = document.getElementById("prestigeUpgrades");
 const prestigeSummaryEl = document.getElementById("prestigeSummary");
+const prestigeResetProgressEl = document.getElementById("prestigeResetProgress");
 const milestonesListEl = document.getElementById("milestonesList");
 const leftColumn = document.getElementById("leftBuildings");
 const rightColumn = document.getElementById("rightBuildings");
@@ -158,13 +160,30 @@ const world = getWorldById(gameState.currentWorld);
         if (!nextWorld) {
             nextWorldProgressEl.textContent = t("worldAllUnlocked");
         } else {
+            const progress = Math.min(gameState.prestigeCookies, nextWorld.unlockCost);
             const remaining = Math.max(0, nextWorld.unlockCost - gameState.prestigeCookies);
-            nextWorldProgressEl.textContent = t("worldUnlockProgress", { remaining: formatNumber(remaining) });
+            nextWorldProgressEl.textContent = t("worldUnlockProgress", {
+                remaining: formatNumber(remaining),
+                current: formatNumber(progress),
+                target: formatNumber(nextWorld.unlockCost)
+            });
         }
     }
 
+    if (prestigeResetProgressEl) {
+        const lifetimeTarget = 1000000;
+        const progress = Math.min(gameState.lifetimeCookies, lifetimeTarget);
+        const remaining = Math.max(0, lifetimeTarget - gameState.lifetimeCookies);
+        prestigeResetProgressEl.textContent = remaining <= 0
+            ? t("prestigeReady")
+            : t("prestigeProgress", {
+                remaining: formatNumber(remaining),
+                current: formatNumber(progress),
+                target: formatNumber(lifetimeTarget)
+            });
+    }
 
-       
+    
     refreshPrestigeUpgradesIfNeeded();
     updatePrestigeResetButtonState();
     renderMilestones();
@@ -194,6 +213,7 @@ export function applyStaticTranslations() {
         ["settingsTitle", t("settingsTitle")],
         ["settingSoundLabel", t("settingSound")],
         ["settingLanguageLabel", t("settingLanguage")],
+        ["settingBackgroundLabel", t("settingBackground")],
         ["exportSaveButton", t("exportSave")],
         ["importSaveButton", t("importSave")],
         ["resetSaveButton", t("resetSave")],
@@ -361,7 +381,8 @@ export function applyWorldTheme() {
         return;
     }
 
-    document.body.style.background = world.theme.background;
+    const customBackground = getBackgroundColor();
+    document.body.style.background = customBackground || world.theme.background;
     mainCookie.src = world.cookieImage;
     mainCookie.style.filter = `drop-shadow(0 0 20px ${world.theme.glow})`;
 }
