@@ -386,6 +386,13 @@ body {
     font-weight: 600;
 }
 
+.prestige-reset-progress {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: #334155;
+    font-weight: 600;
+}
+
 
 .settings-toggle-button {
     position: fixed;
@@ -435,6 +442,12 @@ body {
     border: none;
     border-radius: 8px;
     padding: 6px 8px;
+}
+
+#backgroundColorInput {
+    width: 100%;
+    min-height: 36px;
+    cursor: pointer;
 }
 
 
