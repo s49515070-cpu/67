@@ -4,9 +4,10 @@
 
 
 import { gameLoop, claimAvailableMilestones } from "./engine.js";
-import { renderUI, renderBuildings, renderPrestigeUpgrades, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI } from "./ui.js";
+import { renderUI, renderBuildings, renderPrestigeUpgrades, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig } from "./config.js";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled } from "./config.js";
+import { t } from "./i18n.js";
 
 // ===============================
 // INITIALISIERUNG
@@ -41,62 +42,56 @@ function initSaveControls() {
 }
 
 function initSettingsControls() {
-    const autosaveInput = document.getElementById("autosaveIntervalInput");
-    const uiRefreshInput = document.getElementById("uiRefreshIntervalInput");
+    const settingsToggleButton = document.getElementById("settingsToggleButton");
+    const settingsPanel = document.getElementById("settingsPanel");
+    const settingsCloseButton = document.getElementById("settingsCloseButton");
+    const soundInput = document.getElementById("soundEnabledInput");
+    const languageInput = document.getElementById("languageInput");
     const resetSettingsButton = document.getElementById("resetSettingsButton");
 
-    function bindSettingInput(inputEl, options) {
-        if (!inputEl) return;
+    const setPanelVisibility = (visible) => {
+        if (!settingsPanel) return;
+        settingsPanel.hidden = !visible;
+    };
 
-        const { getValue, updateValue, onUpdated, toastMessage } = options;
-
-        inputEl.value = String(getValue());
-
-        const applySetting = () => {
-            const previousValue = getValue();
-            const updatedValue = updateValue(inputEl.value);
-            inputEl.value = String(updatedValue);
-
-            if (updatedValue !== previousValue) {
-                if (typeof onUpdated === "function") {
-                    onUpdated(updatedValue);
-                }
-                showToast(toastMessage, 1400, "success");
-            }
-        };
-
-        inputEl.addEventListener("blur", applySetting);
-        inputEl.addEventListener("change", applySetting);
-        inputEl.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            applySetting();
-            inputEl.blur();
+    if (settingsToggleButton) {
+        settingsToggleButton.addEventListener("click", () => {
+            setPanelVisibility(settingsPanel?.hidden);
         });
     }
 
-    bindSettingInput(autosaveInput, {
-        getValue: getAutosaveInterval,
-        updateValue: updateAutosaveInterval,
-        onUpdated: restartAutosaveTimer,
-        toastMessage: "⚙️ Autosave-Intervall aktualisiert."
-    });
+   
+    if (settingsCloseButton) {
+        settingsCloseButton.addEventListener("click", () => setPanelVisibility(false));
+    }
 
-    bindSettingInput(uiRefreshInput, {
-        getValue: getUiRefreshInterval,
-        updateValue: updateUiRefreshInterval,
-        toastMessage: "⚙️ UI-Refresh aktualisiert."
-    });
+    if (soundInput) {
+        soundInput.value = getSoundEnabled() ? "on" : "off";
+        soundInput.addEventListener("change", () => {
+            updateSoundEnabled(soundInput.value === "on");
+        });
+    }
+
+    if (languageInput) {
+        languageInput.value = getLanguage();
+        languageInput.addEventListener("change", () => {
+            updateLanguage(languageInput.value);
+            applyStaticTranslations();
+            refreshAllUI();
+        });
+    }
 
     if (resetSettingsButton) {
         resetSettingsButton.addEventListener("click", () => {
             const defaults = resetRuntimeConfig();
 
-            if (autosaveInput) autosaveInput.value = String(defaults.autosaveIntervalMs);
-            if (uiRefreshInput) uiRefreshInput.value = String(defaults.uiRefreshIntervalMs);
+            if (soundInput) soundInput.value = defaults.soundEnabled ? "on" : "off";
+            if (languageInput) languageInput.value = defaults.language;
 
             restartAutosaveTimer();
-            showToast("↺ Settings auf Standard zurückgesetzt.", 1600, "info");
+            applyStaticTranslations();
+            refreshAllUI();
+            showToast(t("settingsResetDone"), 1600, "info");
         });
     }
 }
@@ -120,6 +115,7 @@ function init() {
     initSaveControls();
     initSettingsControls();
     initSaveSyncListener();
+    applyStaticTranslations();
 
     gameLoop();
     requestAnimationFrame(uiLoop);
@@ -139,8 +135,8 @@ function uiLoop(timestamp = 0) {
         if (claimedMilestones.length > 0) {
             claimedMilestones.forEach((milestone) => {
                 const rewards = [];
-                if (milestone.rewardCookies > 0) rewards.push(`+${milestone.rewardCookies} Cookies`);
-                if (milestone.rewardPrestigeCookies > 0) rewards.push(`+${milestone.rewardPrestigeCookies} Prestige`);
+                if (milestone.rewardCookies > 0) rewards.push(`+${milestone.rewardCookies} ${t("snus")}`);
+                if (milestone.rewardPrestigeCookies > 0) rewards.push(`+${milestone.rewardPrestigeCookies} ${t("prestigeSnus")}`);
                 showToast(`🏁 Milestone: ${milestone.label} (${rewards.join(" | ")})`, 1800, "success");
             });
             renderBuildings();
