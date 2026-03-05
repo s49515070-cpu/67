@@ -413,6 +413,17 @@ body {
     width: 240px;
     z-index: 25;
     padding-top: 36px;
+    overflow: hidden;
+    transform-origin: top right;
+    transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.22s ease;
+    max-height: 520px;
+}
+
+.settings-panel.is-collapsed {
+    max-height: 0;
+    opacity: 0;
+    transform: scaleY(0.92);
+    pointer-events: none;
 }
 
 .settings-header {
