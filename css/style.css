@@ -424,7 +424,7 @@ body {
 .settings-header button {
     position: absolute;
     top: 8px;
-    left: 8px;
+    right: 8px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
