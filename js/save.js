@@ -98,6 +98,8 @@ function normalizeSavePayload(parsed) {
     const lifetimeCookiesAtLastPrestige = Math.min(lifetimeCookies, lifetimeCookiesAtLastPrestigeRaw);
     const prestigeCookies = normalizeNumber(parsed.prestigeCookies, 0, 0);
     const currentWorld = Number(parsed.currentWorld);
+    const unlockedWorldIds = normalizeUnlockedWorldIds(parsed.unlockedWorldIds);
+    const normalizedCurrentWorld = worlds.some((world) => world.id === currentWorld) ? currentWorld : 1;
     const prestigeMultiplier = normalizeNumber(parsed.prestigeMultiplier, 1, 1);
     const clickPower = normalizeNumber(parsed.clickPower, 1, 1);
     const buyMode = parsed.buyMode === "max" ? "max" : Number(parsed.buyMode);
@@ -108,6 +110,8 @@ function normalizeSavePayload(parsed) {
         lifetimeCookies,
         lifetimeCookiesAtLastPrestige,
         prestigeCookies,
+        currentWorld: unlockedWorldIds.includes(normalizedCurrentWorld) ? normalizedCurrentWorld : 1,
+        unlockedWorldIds,
         currentWorld: worlds.some((world) => world.id === currentWorld) ? currentWorld : 1,
         buyMode: buyMode === "max" || (Number.isFinite(buyMode) && buyMode > 0) ? buyMode : 1,
         buildingData: normalizeBuildingData(parsed.buildingData),
