@@ -110,15 +110,25 @@ function normalizeSavePayload(parsed) {
         lifetimeCookies,
         lifetimeCookiesAtLastPrestige,
         prestigeCookies,
-        currentWorld: unlockedWorldIds.includes(normalizedCurrentWorld) ? normalizedCurrentWorld : 1,
         unlockedWorldIds,
-        currentWorld: worlds.some((world) => world.id === currentWorld) ? currentWorld : 1,
+        currentWorld: unlockedWorldIds.includes(normalizedCurrentWorld) ? normalizedCurrentWorld : 1,
         buyMode: buyMode === "max" || (Number.isFinite(buyMode) && buyMode > 0) ? buyMode : 1,
         buildingData: normalizeBuildingData(parsed.buildingData),
         prestigeMultiplier,
         clickPower,
         prestigeUpgradeLevels: normalizePrestigeUpgradeLevels(parsed.prestigeUpgradeLevels),
-        milestonesClaimed: normalizeMilestonesClaimed(parsed.milestonesClaimed)
+        milestonesClaimed: normalizeMilestonesClaimed(parsed.milestonesClaimed),
+        questsClaimed: { ...(gameState.questsClaimed || {}), ...(parsed.questsClaimed || {}) },
+        activeBoostUntil: normalizeNumber(parsed.activeBoostUntil, 0, 0),
+        activeBoostCooldownUntil: normalizeNumber(parsed.activeBoostCooldownUntil, 0, 0),
+        totalClicks: normalizeNumber(parsed.totalClicks, 0, 0),
+        autoBuyerUnlocked: Boolean(parsed.autoBuyerUnlocked),
+        autoBuyerEnabled: Boolean(parsed.autoBuyerEnabled),
+        todayStats: {
+            clicks: normalizeNumber(parsed.todayStats?.clicks, 0, 0),
+            earned: normalizeNumber(parsed.todayStats?.earned, 0, 0),
+            resetDayKey: typeof parsed.todayStats?.resetDayKey === "string" ? parsed.todayStats.resetDayKey : ""
+        }
     };
 }
 
