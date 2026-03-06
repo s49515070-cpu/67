@@ -32,6 +32,9 @@ const cookieClickArea = document.getElementById("cookieClickArea");
 const clickEffectContainer = document.getElementById("clickEffectContainer");
 const mainCookie = document.getElementById("mainCookie");
 const worldTransition = document.getElementById("worldTransition");
+const worldPickerModal = document.getElementById("worldPickerModal");
+const worldPickerList = document.getElementById("worldPickerList");
+const worldPickerClose = document.getElementById("worldPickerClose");
 const autosaveIndicator = document.getElementById("autosaveIndicator");
 
 initToastSystem(autosaveIndicator);
@@ -160,9 +163,9 @@ const world = getWorldById(gameState.currentWorld);
         if (!nextWorld) {
             nextWorldProgressEl.textContent = t("worldAllUnlocked");
         } else {
-            const progress = Math.min(gameState.prestigeCookies, nextWorld.unlockCost);
-            const remaining = Math.max(0, nextWorld.unlockCost - gameState.prestigeCookies);
-            nextWorldProgressEl.textContent = t("worldUnlockProgress", {
+            const progress = Math.min(gameState.cookies, nextWorld.unlockCost);
+            const remaining = Math.max(0, nextWorld.unlockCost - gameState.cookies);
+            nextWorldProgressEl.textContent = t("worldUnlockProgressSnus", {
                 remaining: formatNumber(remaining),
                 current: formatNumber(progress),
                 target: formatNumber(nextWorld.unlockCost)
@@ -209,6 +212,7 @@ export function applyStaticTranslations() {
         ["labelCps", t("statsPerSecond")],
         ["labelPrestige", t("statsPrestigeSnus")],
         ["worldButton", t("worldSwitch")],
+        ["worldPickerTitle", t("worldPickerTitle")],
         ["settingsToggleButton", t("settingsOpen")],
         ["milestonesToggleButton", t("milestonesTitle")],
         ["settingsTitle", t("settingsTitle")],
@@ -232,6 +236,13 @@ export function applyStaticTranslations() {
         closeButton.textContent = "✕";
         closeButton.setAttribute("aria-label", t("close"));
         closeButton.setAttribute("title", t("close"));
+    }
+
+    const worldPickerCloseButton = document.getElementById("worldPickerClose");
+    if (worldPickerCloseButton) {
+        worldPickerCloseButton.textContent = "✕";
+        worldPickerCloseButton.setAttribute("aria-label", t("close"));
+        worldPickerCloseButton.setAttribute("title", t("close"));
     }
 
     const milestonesTitle = document.querySelector(".milestones-panel h3");
@@ -345,32 +356,108 @@ updateBuyModeButtonState();
 // WORLD SWITCH
 // ===============================
 
-if (worldButton && worldTransition) {
-    worldButton.addEventListener("click", () => {
+function closeWorldPicker() {
+    if (!worldPickerModal) return;
+    worldPickerModal.hidden = true;
+}
 
-    let nextWorld = gameState.currentWorld + 1;
-    if (nextWorld > worlds.length) nextWorld = 1;
-    const world = getWorldById(nextWorld);
-        
-     if (!world || !isWorldUnlocked(world, gameState.prestigeCookies)) {
-         showToast(t("worldLocked"), 1800, "warning");
-            
-            return;
+function switchToWorld(worldId) {
+    if (!worldTransition) return;
+
+    worldTransition.classList.add("active");
+
+    setTimeout(() => {
+        const changed = changeWorld(worldId);
+
+        if (changed) {
+            applyWorldTheme();
+            renderUI();
         }
 
+        worldTransition.classList.remove("active");
+    }, 600);
+}
 
-    
-        worldTransition.classList.add("active");
+function renderWorldPicker() {
+    if (!worldPickerList) return;
 
-   
-        setTimeout(() => {
-            const changed = changeWorld(nextWorld);
+    worldPickerList.innerHTML = "";
 
-            if (changed) {
-                applyWorldTheme();
+    worlds.forEach((world) => {
+        const unlocked = isWorldUnlocked(world, gameState.cookies);
+        const missing = Math.max(0, world.unlockCost - gameState.cookies);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "world-picker-item";
+        button.classList.toggle("is-current", world.id === gameState.currentWorld);
+        button.classList.toggle("is-locked", !unlocked);
+
+        const title = document.createElement("div");
+        title.className = "world-picker-item-title";
+        title.textContent = `${unlocked ? "🌍" : "🔒"} ${world.name}`;
+
+        const cost = document.createElement("div");
+        cost.className = "world-picker-item-cost";
+        cost.textContent = t("worldUnlockCostSnus", {
+            cost: formatNumber(world.unlockCost)
+        });
+
+        const status = document.createElement("div");
+        status.className = "world-picker-item-status";
+        status.textContent = unlocked
+            ? world.id === gameState.currentWorld
+                ? t("worldCurrent")
+                : t("worldUnlocked")
+            : t("worldMissingSnus", {
+                missing: formatNumber(missing)
+            });
+
+        button.append(title, cost, status);
+
+        button.addEventListener("click", () => {
+            if (!unlocked) {
+                showToast(t("worldLockedNeedSnus", {
+                    missing: formatNumber(missing)
+                }), 1800, "warning");
+                return;
             }
-            worldTransition.classList.remove("active");
-        }, 600);
+
+            closeWorldPicker();
+
+            if (world.id !== gameState.currentWorld) {
+                switchToWorld(world.id);
+            }
+        });
+
+        worldPickerList.appendChild(button);
+    });
+}
+
+if (worldButton && worldPickerModal) {
+    worldButton.addEventListener("click", () => {
+        renderWorldPicker();
+        worldPickerModal.hidden = false;
+    });
+}
+
+if (worldPickerClose) {
+    worldPickerClose.addEventListener("click", closeWorldPicker);
+}
+
+if (worldPickerModal) {
+    worldPickerModal.addEventListener("click", (event) => {
+        if (event.target === worldPickerModal) {
+            closeWorldPicker();
+        }
+    });
+}
+
+if (typeof document.addEventListener === "function") {
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            closeWorldPicker();
+        }
     });
 }
 
