@@ -321,9 +321,9 @@ body {
 .save-controls {
     position: fixed;
     left: 20px;
-    bottom: 20px;
-    display: flex;
-    gap: 8px;
+    right: auto;
+    width: min(280px, calc(100vw - 20px));
+    top: 185px;
 }
 
 .save-controls button {
