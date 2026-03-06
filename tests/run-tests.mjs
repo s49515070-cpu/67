@@ -8,7 +8,7 @@ import {
   setBuyMode,
   buyBuilding,
   getPotentialPrestigeGain,
-  prestigeReset
+  prestigeReset,
   claimAvailableMilestones,
   milestones,
 } from '../js/engine.js';
