@@ -282,17 +282,6 @@ body {
         width: 180px;
     }
 
-    .save-controls {
-        left: 10px;
-        right: 10px;
-        bottom: 70px;
-        flex-wrap: wrap;
-    }
-
-    .save-controls button {
-        flex: 1 1 48%;
-    }
-
     .settings-panel {
         left: 10px;
         right: 10px;
@@ -318,21 +307,6 @@ body {
 }
 
 
-.save-controls {
-    position: fixed;
-    left: 20px;
-    right: auto;
-    width: min(280px, calc(100vw - 20px));
-    top: 185px;
-}
-
-.save-controls button {
-    border: none;
-    border-radius: 10px;
-    padding: 8px 10px;
-    font-weight: 600;
-    cursor: pointer;
-}
 
 #prestigeUpgrades:empty {
     display: none;
@@ -385,6 +359,21 @@ body {
     opacity: 0.5;
 }
 
+
+
+.settings-save-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.settings-save-actions button {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
 
 #resetSaveButton {
     background: #f56565;
