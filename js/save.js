@@ -1,4 +1,4 @@
-// =====================================
+ // =====================================
 // SAVE SYSTEM – SNUS CLICKER
 // LocalStorage Offline Save
 // =====================================
@@ -6,8 +6,26 @@
 import { gameState, prestigeUpgrades, milestones, resetGameState } from "./engine.js";
 import { buildings } from "./buildings.js";
 import { worlds } from "./worlds.js";
+
+function normalizeUnlockedWorldIds(rawUnlockedWorldIds) {
+    const validWorldIds = worlds.map((world) => world.id);
+    const parsed = Array.isArray(rawUnlockedWorldIds) ? rawUnlockedWorldIds : [];
+
+    const sanitized = parsed
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && validWorldIds.includes(value));
+
+    if (!sanitized.includes(1)) {
+        sanitized.push(1);
+    }
+
+    return Array.from(new Set(sanitized)).sort((a, b) => a - b);
+}
+
+
 import { showAutosave, showToast } from "./ui.js";
 import { t } from "./i18n.js";
+ 
 
 const SAVE_KEY = "snus_clicker_save";
 
