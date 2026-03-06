@@ -298,6 +298,23 @@ body {
         right: 10px;
         width: auto;
     }
+
+    .milestones-toggle-button {
+        left: 10px;
+        top: 185px;
+    }
+
+    .milestones-panel {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        top: 235px;
+        max-height: 320px;
+    }
+
+    .milestones-list {
+        max-height: 210px;
+    }
 }
 
 
@@ -394,7 +411,8 @@ body {
 }
 
 
-.settings-toggle-button {
+.settings-toggle-button,
+.milestones-toggle-button {
     position: fixed;
     right: 20px;
     top: 135px;
@@ -403,6 +421,14 @@ body {
     cursor: pointer;
     font-weight: 700;
 }
+.settings-toggle-button {
+    right: 20px;
+}
+
+.milestones-toggle-button {
+    left: 20px;
+}
+
 
 .settings-panel {
     position: fixed;
@@ -510,17 +536,42 @@ body {
 .milestones-panel {
     position: fixed;
     left: 20px;
-    top: 90px;
+    top: 180px;
     width: 280px;
-    max-height: 320px;
-    overflow-y: auto;
+    max-height: 420px;
+    z-index: 25;
+    padding-top: 36px;
+    overflow: hidden;
+    transform-origin: top left;
+    transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.22s ease;
 }
 
-.milestones-panel h3 {
-    margin-bottom: 8px;
+.milestones-panel.is-collapsed {
+    max-height: 0;
+    opacity: 0;
+    transform: scaleY(0.92);
+    pointer-events: none;
+}
+
+.milestones-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.milestones-header button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 4px 8px;
 }
 
 .milestones-list {
+    max-height: 320px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -550,13 +601,4 @@ body {
 .milestone-reward {
     font-size: 0.82rem;
     color: #2d3748;
-}
-
-@media (max-width: 768px) {
-    .milestones-panel {
-        position: static;
-        width: calc(100% - 20px);
-        margin: 10px;
-        max-height: none;
-    }
 }
