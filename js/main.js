@@ -131,6 +131,48 @@ function initSettingsControls() {
 }
 
 
+function initMilestonesControls() {
+    const milestonesToggleButton = document.getElementById("milestonesToggleButton");
+    const milestonesPanel = document.getElementById("milestonesPanel");
+    const milestonesCloseButton = document.getElementById("milestonesCloseButton");
+
+    const collapseDurationMs = 220;
+
+    const setPanelVisibility = (visible) => {
+        if (!milestonesPanel) return;
+
+        if (visible) {
+            milestonesPanel.hidden = false;
+            requestAnimationFrame(() => {
+                milestonesPanel.classList.remove("is-collapsed");
+            });
+        } else {
+            milestonesPanel.classList.add("is-collapsed");
+            window.setTimeout(() => {
+                if (milestonesPanel.classList.contains("is-collapsed")) {
+                    milestonesPanel.hidden = true;
+                }
+            }, collapseDurationMs);
+        }
+
+        if (milestonesToggleButton) {
+            milestonesToggleButton.setAttribute("aria-expanded", visible ? "true" : "false");
+        }
+    };
+
+    if (milestonesToggleButton) {
+        milestonesToggleButton.setAttribute("aria-controls", "milestonesPanel");
+        milestonesToggleButton.setAttribute("aria-expanded", "true");
+        milestonesToggleButton.addEventListener("click", () => {
+            setPanelVisibility(Boolean(milestonesPanel?.hidden));
+        });
+    }
+
+    if (milestonesCloseButton) {
+        milestonesCloseButton.addEventListener("click", () => setPanelVisibility(false));
+    }
+}
+
 function initSaveSyncListener() {
     if (typeof window === "undefined") return;
 
@@ -148,6 +190,7 @@ function init() {
     renderPrestigeUpgrades();
     initSaveControls();
     initSettingsControls();
+    initMilestonesControls();
     initSaveSyncListener();
     applyStaticTranslations();
 
