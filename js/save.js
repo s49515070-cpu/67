@@ -164,11 +164,9 @@ function normalizeSavePayload(parsed) {
 // ===============================
 
 export function saveGame() {
-    try {
-        localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+        const saved = safeStorageSet(SAVE_KEY, JSON.stringify(gameState));
+    if (saved) {
         showAutosave();
-    } catch {
-        // Ignoriere Speicherkapazitäts-/Storage-Fehler, damit das Spiel weiterläuft
     }
 }
 
@@ -178,7 +176,7 @@ export function saveGame() {
 
 export function loadGame() {
 
-    const data = localStorage.getItem(SAVE_KEY);
+     const data = safeStorageGet(SAVE_KEY);
     if (!data) return false;
 
     try {
@@ -193,7 +191,7 @@ export function loadGame() {
         emitSaveApplied();
         return true;
     } catch {
-        localStorage.removeItem(SAVE_KEY);
+        safeStorageRemove(SAVE_KEY);
         return false;
     }
 }
@@ -230,7 +228,7 @@ function tryLegacyClipboardCopy(text) {
 }
 
 export function exportSave() {
-    const data = localStorage.getItem(SAVE_KEY);
+const data = safeStorageGet(SAVE_KEY);
     if (!data) {
         showToast("⚠️ Kein Save gefunden.", 1800, "warning");
         return;
@@ -270,7 +268,7 @@ export function importSave() {
         }
 
         Object.assign(gameState, normalized);
-        localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+        safeStorageSet(SAVE_KEY, JSON.stringify(gameState));
         emitSaveApplied();
         showToast("✅ Save importiert.", 1600, "success");
     } catch {
@@ -289,7 +287,7 @@ export function resetSave() {
 
     try {
         resetGameState();
-        localStorage.removeItem(SAVE_KEY);
+        safeStorageRemove(SAVE_KEY);
         emitSaveApplied();
         showToast("🗑️ Spielstand zurückgesetzt.", 1600, "info");
     } catch {
