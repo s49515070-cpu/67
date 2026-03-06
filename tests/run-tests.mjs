@@ -8,6 +8,7 @@ import {
   setBuyMode,
   buyBuilding,
   getPotentialPrestigeGain,
+  prestigeReset
   claimAvailableMilestones,
   milestones,
 } from '../js/engine.js';
@@ -50,6 +51,7 @@ const {
 function resetEngineState() {
   gameState.cookies = 0;
   gameState.lifetimeCookies = 0;
+  gameState.lifetimeCookiesAtLastPrestige = 0;
   gameState.prestigeCookies = 0;
   gameState.buyMode = 1;
   gameState.currentWorld = 1;
@@ -260,8 +262,21 @@ function testPrestigePurchaseRules() {
 function testPotentialPrestigeGain() {
   resetEngineState();
   gameState.lifetimeCookies = 2_750_000;
+  gameState.lifetimeCookiesAtLastPrestige = 1_000_000;
 
-  assert.equal(getPotentialPrestigeGain(), 2, 'potential prestige gain should floor per million lifetime cookies');
+  assert.equal(getPotentialPrestigeGain(), 1, 'potential prestige gain should only count lifetime gained since last prestige');
+}
+
+function testPotentialPrestigeGainCannotBeClaimedTwice() {
+  resetEngineState();
+  gameState.lifetimeCookies = 2_750_000;
+
+  const firstGain = getPotentialPrestigeGain();
+  assert.equal(firstGain, 2, 'first prestige gain should be based on eligible lifetime cookies');
+
+  const earned = prestigeReset();
+  assert.equal(earned, 2, 'prestige reset should award expected amount once');
+  assert.equal(getPotentialPrestigeGain(), 0, 'prestige should not be re-claimable without new lifetime progress');
 }
 
 function testBuyModeSanitizing() {
