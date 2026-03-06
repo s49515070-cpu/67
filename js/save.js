@@ -76,6 +76,8 @@ function normalizeSavePayload(parsed) {
 
     const cookies = normalizeNumber(parsed.cookies, 0, 0);
     const lifetimeCookies = normalizeNumber(parsed.lifetimeCookies, 0, 0);
+    const lifetimeCookiesAtLastPrestigeRaw = normalizeNumber(parsed.lifetimeCookiesAtLastPrestige, 0, 0);
+    const lifetimeCookiesAtLastPrestige = Math.min(lifetimeCookies, lifetimeCookiesAtLastPrestigeRaw);
     const prestigeCookies = normalizeNumber(parsed.prestigeCookies, 0, 0);
     const currentWorld = Number(parsed.currentWorld);
     const prestigeMultiplier = normalizeNumber(parsed.prestigeMultiplier, 1, 1);
@@ -86,6 +88,7 @@ function normalizeSavePayload(parsed) {
         ...parsed,
         cookies,
         lifetimeCookies,
+        lifetimeCookiesAtLastPrestige
         prestigeCookies,
         currentWorld: worlds.some((world) => world.id === currentWorld) ? currentWorld : 1,
         buyMode: buyMode === "max" || (Number.isFinite(buyMode) && buyMode > 0) ? buyMode : 1,
