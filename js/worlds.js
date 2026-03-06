@@ -19,7 +19,7 @@ export const worlds = [
     {
         id: 2,
         name: "Rainbow Heaven",
-        unlockCost: 5,                 // 5 Prestige Cookies
+        unlockCost: 5,                 // 5 Snus
         multiplier: 1.25,
         cookieImage: "assets/cookies/world2.png",
         theme: {
@@ -31,7 +31,7 @@ export const worlds = [
     {
         id: 3,
         name: "Divine Realm",
-        unlockCost: 25,                // 25 Prestige Cookies
+        unlockCost: 25,                // 25 Snus
         multiplier: 1.75,
         cookieImage: "assets/cookies/world3.png",
         theme: {
@@ -51,6 +51,6 @@ export function getWorldById(id) {
     return worlds.find(w => w.id === id);
 }
 
-export function isWorldUnlocked(world, prestigeCookies) {
-    return prestigeCookies >= world.unlockCost;
+export function isWorldUnlocked(world, snusAmount) {
+    return snusAmount >= world.unlockCost;
 }
