@@ -3,7 +3,7 @@
 // LocalStorage Offline Save
 // =====================================
 
-import { gameState, prestigeUpgrades, milestones, resetGameState } from "./engine.js";
+import { gameState, prestigeUpgrades, milestones, resetGameState, AUTO_BUYER_STRATEGIES, quests } from "./engine.js";
 import { buildings } from "./buildings.js";
 import { worlds } from "./worlds.js";
 
@@ -101,6 +101,19 @@ function normalizePrestigeUpgradeLevels(rawLevels) {
     return mergedPrestigeLevels;
 }
 
+
+function normalizeActiveDailyQuestIds(rawIds) {
+    const dailyIds = quests.filter((quest) => quest.isDaily).map((quest) => quest.id);
+    const parsed = Array.isArray(rawIds) ? rawIds : [];
+    const sanitized = parsed.filter((id) => typeof id === "string" && dailyIds.includes(id));
+
+    if (sanitized.length >= 1) {
+        return Array.from(new Set(sanitized));
+    }
+
+    return dailyIds.slice(0, 2);
+}
+
 function normalizeMilestonesClaimed(rawMilestonesClaimed) {
     const mergedMilestones = {
         ...gameState.milestonesClaimed,
@@ -151,6 +164,8 @@ function normalizeSavePayload(parsed) {
         totalClicks: normalizeNumber(parsed.totalClicks, 0, 0),
         autoBuyerUnlocked: Boolean(parsed.autoBuyerUnlocked),
         autoBuyerEnabled: Boolean(parsed.autoBuyerEnabled),
+        autoBuyerStrategy: AUTO_BUYER_STRATEGIES.includes(parsed.autoBuyerStrategy) ? parsed.autoBuyerStrategy : "value",
+        activeDailyQuestIds: normalizeActiveDailyQuestIds(parsed.activeDailyQuestIds),
         todayStats: {
             clicks: normalizeNumber(parsed.todayStats?.clicks, 0, 0),
             earned: normalizeNumber(parsed.todayStats?.earned, 0, 0),
