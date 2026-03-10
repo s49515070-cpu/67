@@ -13,10 +13,16 @@ import {
   changeWorld,
   isWorldPurchased,
   claimAvailableMilestones,
+  claimAvailableQuests,
   milestones,
+  quests,
+  getActiveQuests,
+  runAutoBuyerTick,
+  setAutoBuyerStrategy,
 } from '../js/engine.js';
 
 import { buildings, getMaxAffordable, getMaxAffordableSummary } from '../js/buildings.js';
+import { getWorldById, getWorldUnlockDetails } from '../js/worlds.js';
 import { createBuildingsUIController } from '../js/ui-buildings.js';
 import { createPrestigeUIController } from '../js/ui-prestige.js';
 
@@ -61,6 +67,7 @@ function resetEngineState() {
   gameState.unlockedWorldIds = [1];
   gameState.prestigeMultiplier = 1;
   gameState.clickPower = 1;
+  gameState.activeDailyQuestIds = quests.filter((quest) => quest.isDaily).slice(0, 2).map((quest) => quest.id);
 
   Object.keys(gameState.buildingData).forEach((id) => {
     gameState.buildingData[id].owned = 0;
@@ -188,6 +195,52 @@ function testBuildingsControllerRendersAfterPurchase() {
   assert.equal(gameState.buildingData.cursor.owned, 1, 'building purchase via controller should update owned count immediately');
 }
 
+
+function testBuildingsControllerMarksBestBuy() {
+  resetEngineState();
+  installControllerDocumentMock();
+
+  const leftColumn = createMockElement('section');
+  const rightColumn = createMockElement('section');
+
+  const controller = createBuildingsUIController({
+    gameState,
+    buildings,
+    getBuildingCost: (building, owned) => Math.floor(building.baseCost * Math.pow(building.growth, owned)),
+    getPurchaseCost: (building, owned, quantity) => {
+      let total = 0;
+      for (let i = 0; i < quantity; i += 1) {
+        total += Math.floor(building.baseCost * Math.pow(building.growth, owned + i));
+      }
+      return total;
+    },
+    getMaxAffordableSummary: (building, owned, cookies) => {
+      let count = 0;
+      let totalCost = 0;
+      while (true) {
+        const cost = Math.floor(building.baseCost * Math.pow(building.growth, owned + count));
+        if (totalCost + cost > cookies) break;
+        totalCost += cost;
+        count += 1;
+      }
+      return { count, totalCost };
+    },
+    buyBuilding,
+    formatNumber: (n) => String(Math.floor(n)),
+    t: (key) => (key === 'bestBuy' ? 'Best Buy' : key),
+    leftColumn,
+    rightColumn
+  });
+
+  controller.renderBuildings();
+
+  const farmCard = rightColumn.children.find((card) => card.dataset?.buildingId === 'farm');
+  assert.ok(farmCard, 'farm card should be rendered');
+
+  const titleNode = farmCard.children?.[1]?.children?.[0];
+  assert.ok(String(titleNode?.innerHTML || '').includes('Best Buy'), 'best value building should be marked in title');
+}
+
 function testPrestigeControllerCallbacks() {
   resetEngineState();
   installControllerDocumentMock();
@@ -287,17 +340,47 @@ function testPotentialPrestigeGainCannotBeClaimedTwice() {
 function testWorldMustBePurchasedBeforeSwitch() {
   resetEngineState();
 
-  gameState.cookies = 4;
-  assert.equal(buyWorld(2), false, 'world purchase should fail when cookies are insufficient');
+  gameState.cookies = 300;
+  gameState.lifetimeCookies = 1_999;
+  gameState.buildingData.cursor.owned = 15;
+  assert.equal(buyWorld(2), false, 'world purchase should fail when lifetime requirement is not met');
   assert.equal(changeWorld(2), false, 'cannot switch to locked world without purchasing');
 
-  gameState.cookies = 10;
-  assert.equal(buyWorld(2), true, 'world purchase should succeed with enough cookies');
+  gameState.lifetimeCookies = 2_000;
+  assert.equal(buyWorld(2), true, 'world purchase should succeed when cost and requirements are met');
   assert.equal(isWorldPurchased(2), true, 'purchased world should be persisted in unlocked list');
-  assert.equal(gameState.cookies, 5, 'buying a world should deduct unlock cost from current cookies');
+  assert.equal(gameState.cookies, 50, 'buying a world should deduct unlock cost from current cookies');
 
   assert.equal(changeWorld(2), true, 'can switch after world is purchased');
   assert.equal(gameState.currentWorld, 2, 'current world should update after successful switch');
+}
+
+
+function testWorldThreeNeedsBuildingRequirement() {
+  resetEngineState();
+  const worldThree = getWorldById(3);
+  assert.ok(worldThree, 'world 3 should exist');
+
+  gameState.cookies = 6_000;
+  gameState.lifetimeCookies = 150_000;
+  gameState.buildingData.cursor.owned = 59;
+
+  assert.equal(buyWorld(3), false, 'world purchase should fail when building requirement is missing');
+
+  gameState.buildingData.cursor.owned = 60;
+  assert.equal(buyWorld(3), true, 'world purchase should succeed once building requirement is met');
+}
+
+
+function testWorldUnlockDetailsReportsMissingProgress() {
+  const worldTwo = getWorldById(2);
+  assert.ok(worldTwo, 'world 2 should exist');
+
+  const details = getWorldUnlockDetails(worldTwo, 100, { lifetimeCookies: 1000, totalBuildings: 5 });
+  assert.equal(details.unlocked, false, 'unlock details should report locked when requirements are missing');
+  assert.ok(details.missingCost > 0, 'unlock details should report missing cost');
+  assert.ok(details.missingLifetime > 0, 'unlock details should report missing lifetime');
+  assert.ok(details.missingBuildings > 0, 'unlock details should report missing buildings');
 }
 
 function testBuyModeSanitizing() {
@@ -360,6 +443,76 @@ function testMilestoneClaimingRewards() {
   assert.ok(claims.some((m) => m.id === rookie.id), 'milestone should be claimed when target is met');
   assert.equal(gameState.milestonesClaimed[rookie.id], true, 'claimed milestone should persist in state');
   assert.ok(gameState.cookies >= rookie.rewardCookies, 'milestone claim should reward cookies');
+}
+
+
+function testMidgameQuestClaimingRewards() {
+  resetEngineState();
+  gameState.cookies = 0;
+  gameState.todayStats.earned = 60_000;
+  gameState.activeDailyQuestIds = ['daily_earned_50k'];
+
+  const claims = claimAvailableQuests();
+  const dailyEarn = quests.find((q) => q.id === 'daily_earned_50k');
+
+  assert.ok(dailyEarn, 'daily earned quest should exist');
+  assert.ok(claims.some((q) => q.id === dailyEarn.id), 'daily earned quest should be claimable when target is met');
+  assert.equal(gameState.questsClaimed[dailyEarn.id], true, 'claimed daily quest should persist in state');
+  assert.ok(gameState.cookies >= dailyEarn.rewardCookies, 'claimed daily quest should grant cookie reward');
+}
+
+
+function testAutoBuyerPrioritizesBestValuePurchases() {
+  resetEngineState();
+  gameState.cookies = 1000;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+
+  const purchases = runAutoBuyerTick();
+
+  assert.equal(purchases, 3, 'auto-buyer should execute up to its per-tick purchase limit');
+  assert.equal(gameState.buildingData.farm.owned, 3, 'auto-buyer should prioritize best cps-per-cost purchases first');
+  assert.equal(gameState.buildingData.cursor.owned, 0, 'lower-value buildings should not be bought while better options are affordable');
+}
+
+
+function testAutoBuyerStrategyCheapPrefersLowCost() {
+  resetEngineState();
+  gameState.cookies = 50;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  setAutoBuyerStrategy('cheap');
+
+  const purchases = runAutoBuyerTick();
+
+  assert.equal(purchases, 3, 'cheap strategy should still honor purchase limit when affordable');
+  assert.equal(gameState.buildingData.cursor.owned, 3, 'cheap strategy should prioritize lower-cost buildings');
+}
+
+
+function testAutoBuyerStrategyReserveKeepsSavings() {
+  resetEngineState();
+  gameState.cookies = 100;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  setAutoBuyerStrategy('reserve');
+
+  const purchases = runAutoBuyerTick();
+
+  assert.ok(purchases >= 1, 'reserve strategy should still buy when budget allows');
+  assert.ok(gameState.cookies >= 20, 'reserve strategy should keep about 20% of cookies unspent');
+}
+
+
+function testDailyQuestRotationMaintainsActiveSubset() {
+  resetEngineState();
+
+  const active = getActiveQuests().filter((quest) => quest.isDaily);
+  assert.equal(active.length, 2, 'daily rotation should keep exactly two active daily quests');
+
+  active.forEach((quest) => {
+    assert.equal(quest.isDaily, true, 'active rotated daily entries should be daily quests');
+  });
 }
 
 function testConfigReset() {
@@ -611,13 +764,21 @@ async function run() {
   testPotentialPrestigeGain();
   testPotentialPrestigeGainCannotBeClaimedTwice();
   testWorldMustBePurchasedBeforeSwitch();
+  testWorldThreeNeedsBuildingRequirement();
+  testWorldUnlockDetailsReportsMissingProgress();
   testBuyModeSanitizing();
   testBuildingsControllerRendersAfterPurchase();
+  testBuildingsControllerMarksBestBuy();
   testPrestigeControllerCallbacks();
   testBuyBuildingNormalizesOwnedType();
   testBuildingPurchaseNeedsValidId();
   testMaxAffordableSummaryMatchesCount();
   testMilestoneClaimingRewards();
+  testMidgameQuestClaimingRewards();
+  testDailyQuestRotationMaintainsActiveSubset();
+  testAutoBuyerPrioritizesBestValuePurchases();
+  testAutoBuyerStrategyCheapPrefersLowCost();
+  testAutoBuyerStrategyReserveKeepsSavings();
   testConfigClampingAndPersistence();
   testConfigReset();
   await testUiBuyModeButtonActiveState();
@@ -625,7 +786,7 @@ async function run() {
   await testImportSaveUsesNormalization();
   await testExportSaveFallbackCopyPath();
   await testResetSaveAppliesWithoutReload();
-
+  
   console.log('All tests passed.');
 }
 
