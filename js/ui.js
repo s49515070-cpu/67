@@ -22,14 +22,17 @@ import {
     getMilestoneProgress,
     quests,
     getQuestProgress,
+    getActiveQuests,
     getBoostStatus,
     activateProductionBoost,
     unlockAutoBuyer,
     setAutoBuyerEnabled,
-    getPrestigePreview
+    getPrestigePreview,
+    PRESTIGE_THRESHOLD,
+    AUTO_BUYER_UNLOCK_COST
 } from "./engine.js";
 import { buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary } from "./buildings.js";
-import { worlds, getWorldById, isWorldUnlocked } from "./worlds.js";
+import { worlds, getWorldById, isWorldUnlocked, getWorldUnlockDetails } from "./worlds.js";
 import { createBuildingsUIController } from "./ui-buildings.js";
 import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createPrestigeUIController } from "./ui-prestige.js";
@@ -63,6 +66,7 @@ const boostStatusEl = document.getElementById("boostStatus");
 const questListEl = document.getElementById("questList");
 const dailySummaryEl = document.getElementById("dailySummary");
 const autoBuyerButton = document.getElementById("autoBuyerButton");
+const goalHintsEl = document.getElementById("goalHints");
 
 initToastSystem(autosaveIndicator);
 
@@ -147,7 +151,7 @@ function renderQuests() {
     if (!questListEl) return;
     questListEl.innerHTML = "";
 
-    quests.forEach((quest) => {
+    getActiveQuests().forEach((quest) => {
         const status = getQuestProgress(quest.id);
         const item = document.createElement("div");
         item.className = "quest-item";
@@ -180,13 +184,85 @@ function renderAutoBuyerState() {
     if (!autoBuyerButton) return;
 
     if (!gameState.autoBuyerUnlocked) {
-        autoBuyerButton.textContent = t("autoBuyerUnlock");
+        autoBuyerButton.textContent = t("autoBuyerUnlock", { cost: formatNumber(AUTO_BUYER_UNLOCK_COST) });
         autoBuyerButton.classList.remove("is-active");
         return;
     }
 
     autoBuyerButton.textContent = gameState.autoBuyerEnabled ? t("autoBuyerOn") : t("autoBuyerOff");
     autoBuyerButton.classList.toggle("is-active", gameState.autoBuyerEnabled);
+}
+
+function formatEta(seconds) {
+    const safeSeconds = Number(seconds);
+    if (!Number.isFinite(safeSeconds) || safeSeconds <= 0) return "0s";
+
+    const total = Math.ceil(safeSeconds);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${secs}s`;
+    return `${secs}s`;
+}
+
+function getNearestMilestoneGoal() {
+    let best = null;
+    milestones.forEach((milestone) => {
+        const status = getMilestoneProgress(milestone.id);
+        if (status.completed) return;
+        const remaining = Math.max(0, status.target - status.current);
+        if (!best || remaining < best.remaining) {
+            best = { remaining, text: `${milestone.label} (${formatNumber(remaining)} left)` };
+        }
+    });
+    return best?.text || null;
+}
+
+function getNearestQuestGoal() {
+    let best = null;
+    quests.forEach((quest) => {
+        const status = getQuestProgress(quest.id);
+        if (status.completed) return;
+        const remaining = Math.max(0, status.target - status.current);
+        if (!best || remaining < best.remaining) {
+            best = { remaining, text: `${quest.label} (${formatNumber(remaining)} left)` };
+        }
+    });
+    return best?.text || null;
+}
+
+function renderGoalHints() {
+    if (!goalHintsEl) return;
+
+    const lines = [];
+    const nextWorld = worlds.find((item) => !isWorldPurchased(item.id));
+    if (nextWorld) {
+        const details = getWorldUnlockDetails(nextWorld, gameState.cookies, {
+            lifetimeCookies: gameState.lifetimeCookies,
+            totalBuildings: buildings.reduce((sum, b) => sum + Number(gameState.buildingData[b.id]?.owned || 0), 0)
+        });
+        const worldParts = [
+            details.missingCost > 0 ? `${formatNumber(details.missingCost)} snus` : null,
+            details.missingLifetime > 0 ? `${formatNumber(details.missingLifetime)} lifetime` : null,
+            details.missingBuildings > 0 ? `${formatNumber(details.missingBuildings)} buildings` : null
+        ].filter(Boolean);
+        const worldText = worldParts.length > 0 ? worldParts.join(' · ') : t('worldReadyToUnlock');
+        const worldEta = details.missingCost > 0 && calculateCps() > 0 ? ` · ETA ${formatEta(details.missingCost / calculateCps())}` : '';
+        lines.push(t('goalWorld', { text: `${worldText}${worldEta}` }));
+    }
+
+    const milestoneGoal = getNearestMilestoneGoal();
+    if (milestoneGoal) lines.push(t('goalMilestone', { text: milestoneGoal }));
+
+    const questGoal = getNearestQuestGoal();
+    if (questGoal) lines.push(t('goalQuest', { text: questGoal }));
+
+    goalHintsEl.innerHTML = `
+        <div class="goal-hints-title">${t('goalsTitle')}</div>
+        <div class="goal-hints-list">${lines.map((line) => `<div>${line}</div>`).join('')}</div>
+    `;
 }
 
 function renderDailySummary() {
@@ -199,9 +275,11 @@ function renderDailySummary() {
 
 export function renderUI() {
     if (!cookieCountEl || !cpsEl || !prestigeCountEl || !worldNameEl) return;
+    
+    const cpsValue = calculateCps();
 
     cookieCountEl.textContent = formatNumber(gameState.cookies);
-    cpsEl.textContent = formatNumber(calculateCps());
+    cpsEl.textContent = formatNumber(cpsValue);
     prestigeCountEl.textContent = gameState.prestigeCookies;
 
     const world = getWorldById(gameState.currentWorld);
@@ -216,34 +294,66 @@ export function renderUI() {
             nextWorldProgressEl.hidden = false;
             const progress = Math.min(gameState.cookies, nextWorld.unlockCost);
             const remaining = Math.max(0, nextWorld.unlockCost - gameState.cookies);
-            nextWorldProgressEl.textContent = t("worldUnlockProgressSnus", {
+            let worldProgressText = t("worldUnlockProgressSnus", {
                 remaining: formatNumber(remaining),
                 current: formatNumber(progress),
                 target: formatNumber(nextWorld.unlockCost)
             });
+            
+            if (remaining > 0 && cpsValue > 0) {
+                worldProgressText += ` ${t("worldUnlockEta", { eta: formatEta(remaining / cpsValue) })}`;
+            }
+
+            nextWorldProgressEl.textContent = worldProgressText;
         }
     }
 
     if (prestigeResetProgressEl) {
-        const lifetimeTarget = 1_000_000;
+        const lifetimeTarget = PRESTIGE_THRESHOLD;
         const progress = Math.min(gameState.lifetimeCookies, lifetimeTarget);
         const remaining = Math.max(0, lifetimeTarget - gameState.lifetimeCookies);
         const preview = getPrestigePreview();
-        prestigeResetProgressEl.textContent = remaining <= 0
-            ? `${t("prestigeReady")} ${t("prestigePreview", {
+        if (remaining <= 0) {
+            const lifetimeSinceLastPrestige = Math.max(0, gameState.lifetimeCookies - gameState.lifetimeCookiesAtLastPrestige);
+            const progressInsideTier = lifetimeSinceLastPrestige % PRESTIGE_THRESHOLD;
+            const remainingToNextPrestige = PRESTIGE_THRESHOLD - progressInsideTier;
+            const etaToNextPrestige = cpsValue > 0 ? remainingToNextPrestige / cpsValue : Infinity;
+
+            const recommendation = preview.gain.prestigeCookies >= 5
+                ? t("prestigeSuggestGreat", { gain: preview.gain.prestigeCookies })
+                : preview.gain.prestigeCookies >= 2
+                    ? t("prestigeSuggestReset", { gain: preview.gain.prestigeCookies })
+                    : Number.isFinite(etaToNextPrestige) && etaToNextPrestige <= 120
+                        ? t("prestigeSuggestNextBetter", { eta: formatEta(etaToNextPrestige) })
+                        : t("prestigeSuggestWait");
+
+            prestigeResetProgressEl.textContent = `${t("prestigeReady")} ${t("prestigePreview", {
                 lose: formatNumber(preview.lose.cookies),
                 gain: preview.gain.prestigeCookies
-            })}`
-            : t("prestigeProgress", {
+            })} ${recommendation}`;
+        } else {
+            let prestigeProgressText = t("prestigeProgress", {
                 remaining: formatNumber(remaining),
                 current: formatNumber(progress),
                 target: formatNumber(lifetimeTarget)
             });
+            
+            if (cpsValue > 0) {
+                const etaText = formatEta(remaining / cpsValue);
+                prestigeProgressText += ` ${t("prestigeEta", { eta: etaText })}`;
+                if ((remaining / cpsValue) <= 60) {
+                    prestigeProgressText += ` ${t("prestigeSuggestSoon", { eta: etaText })}`;
+                }
+            }
+
+            prestigeResetProgressEl.textContent = prestigeProgressText;
+        }
     }
 
     renderBoostStatus();
     renderQuests();
     renderDailySummary();
+    renderGoalHints();
     renderAutoBuyerState();
     refreshPrestigeUpgradesIfNeeded();
     updatePrestigeResetButtonState();
@@ -278,6 +388,7 @@ export function applyStaticTranslations() {
         ["settingSoundLabel", t("settingSound")],
         ["settingLanguageLabel", t("settingLanguage")],
         ["settingBackgroundLabel", t("settingBackground")],
+        ["settingAutoBuyerStrategyLabel", t("settingAutoBuyerStrategy")],
         ["exportSaveButton", t("exportSave")],
         ["importSaveButton", t("importSave")],
         ["resetSaveButton", t("resetSave")],
@@ -376,8 +487,15 @@ function renderWorldPicker() {
 
     worlds.forEach((world) => {
         const purchased = isWorldPurchased(world.id);
-        const unlocked = purchased || isWorldUnlocked(world, gameState.cookies);
-        const missing = Math.max(0, world.unlockCost - gameState.cookies);
+        const unlockDetails = getWorldUnlockDetails(world, gameState.cookies, {
+            lifetimeCookies: gameState.lifetimeCookies,
+            totalBuildings: buildings.reduce((sum, b) => sum + Number(gameState.buildingData[b.id]?.owned || 0), 0)
+        });
+        const unlocked = purchased || isWorldUnlocked(world, gameState.cookies, {
+            lifetimeCookies: gameState.lifetimeCookies,
+            totalBuildings: buildings.reduce((sum, b) => sum + Number(gameState.buildingData[b.id]?.owned || 0), 0)
+        });
+        const missing = unlockDetails.missingCost;
         const button = document.createElement("button");
         button.type = "button";
         button.className = "world-picker-item";
@@ -387,14 +505,24 @@ function renderWorldPicker() {
         button.innerHTML = `
             <div class="world-picker-item-title">${unlocked ? "🌍" : "🔒"} ${world.name}</div>
             <div class="world-picker-item-cost">${t("worldUnlockCostSnus", { cost: formatNumber(world.unlockCost) })}</div>
-            <div class="world-picker-item-status">${purchased ? (world.id === gameState.currentWorld ? t("worldCurrent") : t("worldUnlocked")) : t("worldMissingSnus", { missing: formatNumber(missing) })}</div>
+            <div class="world-picker-item-status">${purchased ? (world.id === gameState.currentWorld ? t("worldCurrent") : t("worldUnlocked")) : unlockDetails.unlocked ? t("worldReadyToUnlock") : [
+                unlockDetails.missingCost > 0 ? t("worldMissingSnus", { missing: formatNumber(unlockDetails.missingCost) }) : "",
+                unlockDetails.missingLifetime > 0 ? t("worldMissingLifetime", { missing: formatNumber(unlockDetails.missingLifetime) }) : "",
+                unlockDetails.missingBuildings > 0 ? t("worldMissingBuildings", { missing: formatNumber(unlockDetails.missingBuildings) }) : ""
+            ].filter(Boolean).join(" · ")}</div>
         `;
 
         button.addEventListener("click", () => {
             if (!purchased) {
                 const bought = buyWorld(world.id);
                 if (!bought) {
-                    showToast(t("worldLockedNeedSnus", { missing: formatNumber(missing) }), 1800, "warning");
+                    showToast(t("worldLockedNeedProgress", {
+                        reasons: [
+                            unlockDetails.missingCost > 0 ? t("worldMissingSnus", { missing: formatNumber(unlockDetails.missingCost) }) : "",
+                            unlockDetails.missingLifetime > 0 ? t("worldMissingLifetime", { missing: formatNumber(unlockDetails.missingLifetime) }) : "",
+                            unlockDetails.missingBuildings > 0 ? t("worldMissingBuildings", { missing: formatNumber(unlockDetails.missingBuildings) }) : ""
+                        ].filter(Boolean).join(" · ")
+                    }), 2000, "warning");
                     return;
                 }
                 showToast(t("worldPurchased", { name: world.name }), 1600, "success");
@@ -433,7 +561,7 @@ if (autoBuyerButton) {
     autoBuyerButton.addEventListener("click", () => {
         if (!gameState.autoBuyerUnlocked) {
             const unlocked = unlockAutoBuyer();
-            showToast(unlocked ? t("autoBuyerUnlocked") : t("autoBuyerNeedSnus"), 1500, unlocked ? "success" : "warning");
+            showToast(unlocked ? t("autoBuyerUnlocked") : t("autoBuyerNeedSnus", { cost: formatNumber(AUTO_BUYER_UNLOCK_COST) }), 1500, unlocked ? "success" : "warning");
             return;
         }
         setAutoBuyerEnabled(!gameState.autoBuyerEnabled);
