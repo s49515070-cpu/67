@@ -101,6 +101,7 @@
         <div id="dailySummary" class="daily-summary"></div>
     </div>
 
+    <div id="goalHints" class="goal-hints glass" aria-live="polite"></div>
 
     <button id="settingsToggleButton" class="settings-toggle-button glass" type="button">⚙️ Einstellungen</button>
 
@@ -127,6 +128,15 @@
         <label>
             <span id="settingBackgroundLabel">Hintergrundfarbe</span>
             <input id="backgroundColorInput" type="color" value="#dff6ff">
+        </label>
+        <label>
+            <span id="settingAutoBuyerStrategyLabel">Auto-Buyer Strategie</span>
+            <select id="autoBuyerStrategyInput">
+                <option value="value">Effizienz</option>
+                <option value="cheap">Günstig zuerst</option>
+                <option value="balanced">Ausgewogen</option>
+                <option value="reserve">Sparmodus (20% halten)</option>
+            </select>
         </label>
                 <div class="settings-save-actions">
             <button id="exportSaveButton" type="button">📤 Save exportieren</button>
