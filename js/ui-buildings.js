@@ -1,7 +1,8 @@
 export function createBuildingsUIController({ gameState, buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary, buyBuilding, formatNumber, t, leftColumn, rightColumn }) {
     const fallbackTranslations = {
         purchase: "Kauf",
-        nextPrice: "Nächster Preis"
+        nextPrice: "Nächster Preis",
+        bestBuy: "Best Buy"   
     };
     const translate = typeof t === "function" ? t : (key) => fallbackTranslations[key] || key;
     const buildingCardMap = new Map();
@@ -35,6 +36,25 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         };
     }
 
+    
+    function getBestBuyBuildingId() {
+        let best = null;
+
+        buildings.forEach((building) => {
+            const rawOwned = Number(gameState.buildingData[building.id]?.owned);
+            const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
+            const cost = getPurchaseCost(building, owned, 1);
+            if (!Number.isFinite(cost) || cost <= 0) return;
+
+            const score = building.baseCps / cost;
+            if (!best || score > best.score || (score === best.score && cost < best.cost)) {
+                best = { id: building.id, score, cost };
+            }
+        });
+
+        return best ? best.id : null;
+    }
+
     function buildCardSkeleton(building) {
         const card = document.createElement("div");
         card.className = "building-card";
@@ -65,7 +85,7 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         return { card, title, nextPrice, buyCost };
     }
 
-    function updateBuildingCard(building) {
+    function updateBuildingCard(building, bestBuyBuildingId) {
         const entry = buildingCardMap.get(building.id);
         if (!entry) return;
 
@@ -76,12 +96,15 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         const purchase = getCurrentPurchaseCost(building, owned);
         const canAfford = purchase.quantity > 0 && gameState.cookies >= purchase.cost;
 
-        entry.title.innerHTML = `<strong>${building.name}</strong> (${owned})`;
+        const isBestBuy = building.id === bestBuyBuildingId;
+
+        entry.title.innerHTML = `<strong>${building.name}</strong> (${owned})${isBestBuy ? ` · ⭐ ${translate("bestBuy")}` : ""}`;
         entry.nextPrice.textContent = `${translate("nextPrice")}: ${formatNumber(cost)}`;
         entry.buyCost.textContent = `${translate("purchase")} (${gameState.buyMode === "max" ? "MAX" : `x${purchase.quantity}`}): ${formatNumber(purchase.cost)}`;
        
         entry.card.classList.toggle("is-affordable", canAfford);
         entry.card.classList.toggle("is-unaffordable", !canAfford);
+        entry.card.classList.toggle("is-best-buy", isBestBuy);
     }
 
     function ensureBuildingCardsInitialized() {
@@ -110,8 +133,11 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
     }
 
     function updateBuildingCards() {
+       const bestBuyBuildingId = getBestBuyBuildingId();
+
         buildings.forEach((building) => {
             updateBuildingCard(building);
+            updateBuildingCard(building, bestBuyBuildingId);
         });
     }
 
