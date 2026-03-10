@@ -7,36 +7,36 @@ export const buildings = [
     {
         id: "cursor",
         name: "Cursor",
-        baseCost: 15,
+        baseCost: 12,
         baseCps: 0.1,
-        growth: 1.15,
+        growth: 1.14,
         icon: "assets/buildings/cursor.png",
         side: "left"
     },
     {
         id: "farm",
         name: "Snus Farm",
-        baseCost: 100,
+        baseCost: 90,
         baseCps: 1,
-        growth: 1.15,
+        growth: 1.14,
         icon: "assets/buildings/farm.png",
         side: "right"
     },
     {
         id: "factory",
         name: "Snus Factory",
-        baseCost: 1100,
+        baseCost: 950,
         baseCps: 8,
-        growth: 1.15,
+        growth: 1.14,
         icon: "assets/buildings/factory.png",
         side: "left"
     },
     {
         id: "temple",
         name: "Snus Temple",
-        baseCost: 12000,
+        baseCost: 9000,
         baseCps: 47,
-        growth: 1.15,
+        growth: 1.14,
         icon: "assets/buildings/temple.png",
         side: "right"
     }
