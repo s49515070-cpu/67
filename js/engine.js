@@ -4,12 +4,18 @@
 // =====================================
 
 import { buildings, getPurchaseCost, getBuildingCps, getMaxAffordableSummary } from "./buildings.js";
-import { getWorldById, worlds } from "./worlds.js";
+import { getWorldById, worlds, isWorldUnlocked } from "./worlds.js";
 
-const PRESTIGE_THRESHOLD = 1_000_000;
+export const PRESTIGE_THRESHOLD = 1_000_000;
 const ACTIVE_BOOST_DURATION_MS = 30_000;
 const ACTIVE_BOOST_COOLDOWN_MS = 30_000;
 const ACTIVE_BOOST_MULTIPLIER = 3;
+
+export const AUTO_BUYER_UNLOCK_COST = 30_000;
+const AUTO_BUYER_MAX_PURCHASES_PER_TICK = 3;
+
+export const AUTO_BUYER_STRATEGIES = ["value", "cheap", "balanced", "reserve"];
+const AUTO_BUYER_RESERVE_RATIO = 0.2;
 
 export const prestigeUpgrades = [
     {
@@ -50,6 +56,23 @@ export const milestones = [
         progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0)
     },
     {
+        id: "lifetime_100k",
+        label: "Seasoned Roller",
+        description: "Erreiche 100.000 Lifetime-Snus",
+        target: 100_000,
+        rewardCookies: 20_000,
+        progress: (state) => state.lifetimeCookies
+    },
+    {
+        id: "buildings_75",
+        label: "Industrialist",
+        description: "Besitze insgesamt 75 Gebäude",
+        target: 75,
+        rewardCookies: 35_000,
+        rewardPrestigeCookies: 1,
+        progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0)
+    },
+    {
         id: "lifetime_1m",
         label: "Snus Tycoon",
         description: "Erreiche 1.000.000 Lifetime Snus",
@@ -71,6 +94,34 @@ export const quests = [
         isDaily: true
     },
     {
+        id: "daily_earned_50k",
+        label: "Daily: 50.000 Snus",
+        description: "Verdiene heute 50.000 Snus",
+        target: 50_000,
+        rewardCookies: 6_000,
+        progress: (state) => state.todayStats.earned,
+        isDaily: true
+    },
+    {
+        id: "daily_clicks_500",
+        label: "Daily: 500 Klicks",
+        description: "Klicke heute 500x",
+        target: 500,
+        rewardCookies: 6_500,
+        progress: (state) => state.todayStats.clicks,
+        isDaily: true
+    },
+    {
+        id: "daily_earned_200k",
+        label: "Daily: 200.000 Snus",
+        description: "Verdiene heute 200.000 Snus",
+        target: 200_000,
+        rewardCookies: 16_000,
+        rewardPrestigeCookies: 1,
+        progress: (state) => state.todayStats.earned,
+        isDaily: true
+    },
+    {
         id: "long_clicks_5000",
         label: "Long Run: 5.000 Klicks",
         description: "Klicke insgesamt 5.000x",
@@ -78,6 +129,16 @@ export const quests = [
         rewardCookies: 10_000,
         rewardPrestigeCookies: 1,
         progress: (state) => state.totalClicks,
+        isDaily: false
+    },
+    {
+        id: "long_buildings_100",
+        label: "Long Run: 100 Gebäude",
+        description: "Besitze insgesamt 100 Gebäude",
+        target: 100,
+        rewardCookies: 25_000,
+        rewardPrestigeCookies: 1,
+        progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0),
         isDaily: false
     }
 ];
@@ -101,6 +162,8 @@ export const gameState = {
     totalClicks: 0,
     autoBuyerUnlocked: false,
     autoBuyerEnabled: false,
+    autoBuyerStrategy: "value",
+    activeDailyQuestIds: [],
     todayStats: {
         clicks: 0,
         earned: 0,
@@ -113,19 +176,53 @@ function getTodayKey() {
     return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
 }
 
+
+function getDailyQuestPool() {
+    return quests.filter((quest) => quest.isDaily);
+}
+
+function rotateDailyQuestsForToday() {
+    const pool = getDailyQuestPool();
+    if (pool.length <= 2) {
+        gameState.activeDailyQuestIds = pool.map((quest) => quest.id);
+        return;
+    }
+
+    const key = getTodayKey();
+    const seed = Array.from(key).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const firstIndex = seed % pool.length;
+    const secondIndex = (seed + 1 + Math.floor(seed / 3)) % pool.length;
+
+    const ids = [pool[firstIndex].id, pool[secondIndex].id];
+    gameState.activeDailyQuestIds = Array.from(new Set(ids));
+
+    if (gameState.activeDailyQuestIds.length < 2) {
+        const fallback = pool.find((quest) => !gameState.activeDailyQuestIds.includes(quest.id));
+        if (fallback) gameState.activeDailyQuestIds.push(fallback.id);
+    }
+}
+
+export function getActiveQuests() {
+    const activeDailyIds = Array.isArray(gameState.activeDailyQuestIds) ? gameState.activeDailyQuestIds : [];
+    return quests.filter((quest) => !quest.isDaily || activeDailyIds.includes(quest.id));
+}
+
 function ensureDailyStats() {
     const key = getTodayKey();
     if (gameState.todayStats.resetDayKey !== key) {
         gameState.todayStats.resetDayKey = key;
         gameState.todayStats.clicks = 0;
-        gameState.todayStats.earned = 0;
-
-        quests
-            .filter((quest) => quest.isDaily)
-            .forEach((quest) => {
-                gameState.questsClaimed[quest.id] = false;
-            });
+        gameState.todayStats.earned = 0
+        
+        rotateDailyQuestsForToday();
+        getDailyQuestPool().forEach((quest) => {
+            gameState.questsClaimed[quest.id] = false;
+        });
     }
+}
+
+function getTotalBuildingsOwned() {
+    return buildings.reduce((sum, building) => sum + Number(gameState.buildingData[building.id]?.owned || 0), 0);
 }
 
 function addCookies(amount) {
@@ -157,7 +254,7 @@ function resetMilestones() {
 }
 
 function resetQuests() {
-    quests.forEach((quest) => {
+    getActiveQuests().forEach((quest) => {
         gameState.questsClaimed[quest.id] = false;
     });
 }
@@ -177,12 +274,15 @@ export function resetGameState() {
     gameState.totalClicks = 0;
     gameState.autoBuyerUnlocked = false;
     gameState.autoBuyerEnabled = false;
+    gameState.autoBuyerStrategy = "value";
+    gameState.activeDailyQuestIds = [];
     gameState.todayStats = {
         clicks: 0,
         earned: 0,
         resetDayKey: getTodayKey()
     };
-
+    
+    rotateDailyQuestsForToday();
     resetBuildingData();
     resetPrestigeUpgrades();
     resetMilestones();
@@ -238,7 +338,7 @@ export function activateProductionBoost() {
     return true;
 }
 
-export function unlockAutoBuyer(cost = 50_000) {
+export function unlockAutoBuyer(cost = AUTO_BUYER_UNLOCK_COST) {
     if (gameState.autoBuyerUnlocked) return true;
     if (gameState.cookies < cost) return false;
     gameState.cookies -= cost;
@@ -253,14 +353,64 @@ export function setAutoBuyerEnabled(enabled) {
     return true;
 }
 
+function normalizeAutoBuyerStrategy(value) {
+    return AUTO_BUYER_STRATEGIES.includes(value) ? value : "value";
+}
+
+export function setAutoBuyerStrategy(strategy) {
+    gameState.autoBuyerStrategy = normalizeAutoBuyerStrategy(strategy);
+    return gameState.autoBuyerStrategy;
+}
+
+export function getAutoBuyerStrategy() {
+    return normalizeAutoBuyerStrategy(gameState.autoBuyerStrategy);
+}
+
+function getAutoBuyerChoice() {
+    let best = null;
+
+    buildings.forEach((building) => {
+        const data = gameState.buildingData[building.id];
+        if (!data) return;
+
+        const rawOwned = Number(data.owned);
+        const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
+        const cost = getPurchaseCost(building, owned, 1);
+        if (cost <= 0 || cost > gameState.cookies) return;
+
+        const valueScore = building.baseCps / cost;
+        const strategy = getAutoBuyerStrategy();
+        const availableBudget = strategy === "reserve"
+            ? Math.max(0, gameState.cookies * (1 - AUTO_BUYER_RESERVE_RATIO))
+            : gameState.cookies;
+        if (cost > availableBudget) return;
+
+        const score = strategy === "cheap"
+            ? -cost
+            : strategy === "balanced"
+                ? (valueScore * 0.75 + (building.baseCps / 1000) * 0.25)
+                : valueScore;
+
+        if (!best || score > best.score || (score === best.score && cost < best.cost)) {
+            best = { buildingId: building.id, score, cost, owned };
+        }
+    });
+
+    return best;
+}
+
 export function runAutoBuyerTick() {
     if (!gameState.autoBuyerUnlocked || !gameState.autoBuyerEnabled) return 0;
 
     let purchases = 0;
-    buildings.forEach((building) => {
-        const bought = buyBuilding(building.id);
-        if (bought) purchases += 1;
-    });
+    while (purchases < AUTO_BUYER_MAX_PURCHASES_PER_TICK) {
+        const choice = getAutoBuyerChoice();
+        if (!choice) break;
+
+        gameState.cookies -= choice.cost;
+        gameState.buildingData[choice.buildingId].owned = choice.owned + 1;
+        purchases += 1;
+    }
 
     return purchases;
 }
@@ -387,7 +537,7 @@ export function claimAvailableQuests() {
     ensureDailyStats();
     const claimedNow = [];
 
-    quests.forEach((quest) => {
+    getActiveQuests().forEach((quest) => {
         const status = getQuestProgress(quest.id);
         if (!status.completed || status.claimed) return;
 
@@ -494,7 +644,10 @@ export function buyWorld(worldId) {
     if (!world) return false;
     if (isWorldPurchased(worldId)) return true;
 
-    if (gameState.cookies < world.unlockCost) return false;
+        if (!isWorldUnlocked(world, gameState.cookies, {
+        lifetimeCookies: gameState.lifetimeCookies,
+        totalBuildings: getTotalBuildingsOwned()
+    })) return false;
 
     gameState.cookies -= world.unlockCost;
     gameState.unlockedWorldIds.push(worldId);
