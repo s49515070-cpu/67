@@ -10,7 +10,11 @@ export const worlds = [
   {
     id: 2,
     name: "Rainbow Heaven",
-    unlockCost: 5,
+    unlockCost: 250,
+    requirements: {
+    lifetimeCookies: 2000,
+    totalBuildings: 15
+    },
     multiplier: 1.25,
     theme: "rainbow",
     cookieImage: "assets/cookies/world2.png"
@@ -18,7 +22,11 @@ export const worlds = [
   {
     id: 3,
     name: "Divine Realm",
-    unlockCost: 25,
+    unlockCost: 5000,
+    requirements: {
+    lifetimeCookies: 100000,
+    totalBuildings: 60
+    },
     multiplier: 1.75,
     theme: "divine",
     cookieImage: "assets/cookies/world3.png"
