@@ -19,7 +19,11 @@ export const worlds = [
     {
         id: 2,
         name: "Rainbow Heaven",
-        unlockCost: 5,                 // 5 Snus
+        unlockCost: 250,               // Midgame-Fortschritt statt Sofort-Unlock
+        requirements: {
+            lifetimeCookies: 2_000,
+            totalBuildings: 15
+        },
         multiplier: 1.25,
         cookieImage: "assets/cookies/world2.png",
         theme: {
@@ -31,7 +35,11 @@ export const worlds = [
     {
         id: 3,
         name: "Divine Realm",
-        unlockCost: 25,                // 25 Snus
+        unlockCost: 5000,              // Später Meilenstein
+        requirements: {
+            lifetimeCookies: 100_000,
+            totalBuildings: 60
+        },
         multiplier: 1.75,
         cookieImage: "assets/cookies/world3.png",
         theme: {
@@ -51,6 +59,31 @@ export function getWorldById(id) {
     return worlds.find(w => w.id === id);
 }
 
-export function isWorldUnlocked(world, snusAmount) {
-    return snusAmount >= world.unlockCost;
+export function getWorldUnlockDetails(world, snusAmount, progress = {}) {
+    const requirements = world?.requirements || {};
+    const lifetimeTarget = Number(requirements.lifetimeCookies || 0);
+    const buildingsTarget = Number(requirements.totalBuildings || 0);
+
+    const lifetimeCurrent = Number(progress.lifetimeCookies || 0);
+    const buildingsCurrent = Number(progress.totalBuildings || 0);
+
+    const hasCost = Number(snusAmount) >= Number(world?.unlockCost || 0);
+    const hasLifetime = lifetimeCurrent >= lifetimeTarget;
+    const hasBuildings = buildingsCurrent >= buildingsTarget;
+
+    return {
+        unlocked: hasCost && hasLifetime && hasBuildings,
+        hasCost,
+        hasLifetime,
+        hasBuildings,
+        missingCost: Math.max(0, Number(world?.unlockCost || 0) - Number(snusAmount || 0)),
+        missingLifetime: Math.max(0, lifetimeTarget - lifetimeCurrent),
+        missingBuildings: Math.max(0, buildingsTarget - buildingsCurrent),
+        lifetimeTarget,
+        buildingsTarget
+    };
+}
+
+export function isWorldUnlocked(world, snusAmount, progress = {}) {
+    return getWorldUnlockDetails(world, snusAmount, progress).unlocked;
 }
