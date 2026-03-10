@@ -3,7 +3,7 @@
 // =====================================
 
 
-import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress } from "./engine.js";
+import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy } from "./engine.js";
 import { renderUI, renderBuildings, renderPrestigeUpgrades, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor } from "./config.js";
@@ -48,10 +48,24 @@ function initSettingsControls() {
     const soundInput = document.getElementById("soundEnabledInput");
     const languageInput = document.getElementById("languageInput");
     const backgroundColorInput = document.getElementById("backgroundColorInput");
+    const autoBuyerStrategyInput = document.getElementById("autoBuyerStrategyInput");
     const resetSettingsButton = document.getElementById("resetSettingsButton");
     
     const collapseDurationMs = 220;
 
+    
+    const updateAutoBuyerStrategyOptionLabels = () => {
+        if (!autoBuyerStrategyInput) return;
+
+        const optionValue = autoBuyerStrategyInput.querySelector('option[value="value"]');
+        const optionCheap = autoBuyerStrategyInput.querySelector('option[value="cheap"]');
+        const optionBalanced = autoBuyerStrategyInput.querySelector('option[value="balanced"]');
+        const optionReserve = autoBuyerStrategyInput.querySelector('option[value="reserve"]');
+        if (optionValue) optionValue.textContent = t("autoBuyerStrategyValue");
+        if (optionCheap) optionCheap.textContent = t("autoBuyerStrategyCheap");
+        if (optionBalanced) optionBalanced.textContent = t("autoBuyerStrategyBalanced");
+        if (optionReserve) optionReserve.textContent = t("autoBuyerStrategyReserve");
+    };
 
     const setPanelVisibility = (visible) => {
         if (!settingsPanel) return;
@@ -100,6 +114,7 @@ function initSettingsControls() {
         languageInput.addEventListener("change", () => {
             updateLanguage(languageInput.value);
             applyStaticTranslations();
+            updateAutoBuyerStrategyOptionLabels();
             refreshAllUI();
         });
     }
@@ -114,6 +129,22 @@ function initSettingsControls() {
         });
     }
 
+    if (autoBuyerStrategyInput) {
+        updateAutoBuyerStrategyOptionLabels();
+        autoBuyerStrategyInput.value = getAutoBuyerStrategy();
+        autoBuyerStrategyInput.addEventListener("change", () => {
+            const strategy = setAutoBuyerStrategy(autoBuyerStrategyInput.value);
+            const strategyLabelKey = strategy === "cheap"
+                ? "autoBuyerStrategyCheap"
+                : strategy === "balanced"
+                    ? "autoBuyerStrategyBalanced"
+                    : strategy === "reserve"
+                        ? "autoBuyerStrategyReserve"
+                        : "autoBuyerStrategyValue";
+            showToast(t("autoBuyerStrategyUpdated", { strategy: t(strategyLabelKey) }), 1300, "info");
+        });
+    }
+
     if (resetSettingsButton) {
         resetSettingsButton.addEventListener("click", () => {
             const defaults = resetRuntimeConfig();
@@ -121,9 +152,15 @@ function initSettingsControls() {
             if (soundInput) soundInput.value = defaults.soundEnabled ? "on" : "off";
             if (languageInput) languageInput.value = defaults.language;
             if (backgroundColorInput) backgroundColorInput.value = defaults.backgroundColor || "#dff6ff";
+            if (autoBuyerStrategyInput) {
+                setAutoBuyerStrategy("value");
+                updateAutoBuyerStrategyOptionLabels();
+                autoBuyerStrategyInput.value = getAutoBuyerStrategy();
+            }
 
             restartAutosaveTimer();
             applyStaticTranslations();
+            updateAutoBuyerStrategyOptionLabels();
             refreshAllUI();
             showToast(t("settingsResetDone"), 1600, "info");
         });
@@ -181,6 +218,17 @@ function initSaveSyncListener() {
     });
 }
 
+function formatElapsedCompact(ms) {
+    const totalSeconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+}
+
 function init() {
 
     loadConfig();
@@ -189,7 +237,11 @@ function init() {
         const lastSeen = Number(localStorage.getItem("snus_clicker_last_seen") || Date.now());
         const offline = applyOfflineProgress(Date.now() - lastSeen);
         if (offline.gained > 0) {
-            showToast(t("offlineProgress", { gained: Math.floor(offline.gained) }), 2000, "info");
+            showToast(t("offlineProgressDetailed", {
+                gained: Math.floor(offline.gained),
+                time: formatElapsedCompact(offline.elapsedMs),
+                cap: offline.capped ? t("offlineCapHit") : ""
+            }), 2600, "info");
         }
     }
     applyWorldTheme();
