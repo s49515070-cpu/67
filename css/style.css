@@ -111,6 +111,11 @@ body {
     box-shadow: 0 0 14px rgba(46, 204, 113, 0.2);
 }
 
+.building-card.is-best-buy {
+    border: 1px solid rgba(250, 204, 21, 0.8);
+    box-shadow: 0 0 16px rgba(250, 204, 21, 0.28);
+}
+
 .building-card.is-unaffordable {
     opacity: 0.6;
     filter: grayscale(0.15);
@@ -740,3 +745,27 @@ body {
     color: #ff3b30;
     font-size: 1.15rem;
 } 
+
+
+.goal-hints {
+    position: fixed;
+    top: 148px;
+    left: 20px;
+    min-width: 240px;
+    max-width: 320px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    z-index: 50;
+}
+
+.goal-hints-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.goal-hints-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #334155;
+}
